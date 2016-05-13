@@ -1,2 +1,2 @@
 # SMON
-Sparse Model based Multi-Omics data Network analysis
+Sparse Model based Multi-Omics Network analysis

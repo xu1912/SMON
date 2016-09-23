@@ -1,25 +1,14 @@
 ##Read the pre-processed data
-comp_d=(as.matrix(read.table("D:/TCGA/mRNA_ans/complete_data.txt",sep=",",header=T,row.names=1)))
-
-pd=read.table("D:/TCGA/mRNA_ans/phe.csv",sep=",",header=T,stringsAsFactor=F,na.strings="NA")
-
-pd[which(is.na(pd$days_to_death)),9]=pd[which(is.na(pd$days_to_death)),8]
-pd$status=0
-pd[which(pd$days_to_last_followup>=pd$days_to_death & pd$vital_status=="Dead"),11]=1
-
 library(survival)
-
-dc=pd[complete.cases(pd[,c(-3,-5)]),c(-3,-5)]
-
-cdd=data.frame(cbind(row.names(comp_d),comp_d),stringsAsFactors=F)
-cdd[,1]=gsub("\\.","-",cdd[,1])
-colnames(cdd)[13112]="Rgr_small"
-
 library(sqldf)
+library(qvalue)
+library(glmnet)
+
+dc=read.table("D:/TCGA/mRNA_ans/phe.csv",sep=",",header=T,stringsAsFactor=F,na.strings="NA")
+cdd=read.table("D:/TCGA/mRNA_ans/complete_data.txt",sep=",",header=T,row.names=1,stringsAsFactors=F)
 
 tdd=sqldf("select a.* from cdd a, dc b where a.V1=b.bcr_patient_barcode")
 
-ty=dc[,c(6,9)]
 ty[,1]=ty[,1]/365.0
 colnames(ty)[1]="time"
 tx=as.matrix(cbind(tdd[,-1], dc$age_at_initial_pathologic_diagnosis))
@@ -36,18 +25,9 @@ for (i in 1:length(gene_ln)){
 
 }
 
-library(qvalue)
-
 q_n=qvalue(p_n)
 
-
-
-
-library(glmnet)
-
-y=ty[which(ty[,1]>0),]
 y=as.matrix(y)
-x=tx[which(ty[,1]>0),]
 
 cv_r=cv.glmnet(x,y,family="cox")
 r_beta=cv_r$glmnet.fit$beta

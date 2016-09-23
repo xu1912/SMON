@@ -37,16 +37,3 @@ wgcna_exp=x[,which(rowSums(r_beta_m)!=0)]
 wgcna_exp=data.frame(wgcna_exp[,-length(wgcna_exp[1,])])
 
 write.table(wgcna_exp,"wgcna_exp_input.txt",quote=F,sep="\t",col.names=T,row.names=F)
-
-idx=numeric()
-j=0
-for(i in 1:length(r_beta_m[,1])){
-
-	if(length(which(r_beta_m[i,]!=0))>0) {
-		j=j+1
-		idx[j]=i
-	}
-
-}
-
-

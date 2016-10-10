@@ -28,11 +28,16 @@ for (i in 1:length(gene_ln)){
 
 q_n=qvalue(p_n)
 
-y=as.matrix(y)
+y=as.matrix(ty)
 
-cv_r=cv.glmnet(x,y,family="cox")
-r_beta=cv_r$glmnet.fit$beta
-r_beta_m=as.matrix(r_beta)
+library("Coxnet")
+
+#cv_r=cv.glmnet(x,y,family="cox")
+#r_beta=cv_r$glmnet.fit$beta
+#r_beta_m=as.matrix(r_beta)
+
+res=Coxnet(x, y, penalty = "Enet",alpha = 0.1,nlambda=20,nfolds=10)
+res=Coxnet(x, y, penalty = "Enet",alpha = 0.1,lambda=res$fit0$lambda)
 
 wgcna_exp=x[,which(rowSums(r_beta_m)!=0)]
 wgcna_exp=data.frame(wgcna_exp[,-length(wgcna_exp[1,])])

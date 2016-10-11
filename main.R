@@ -1,9 +1,11 @@
 ##Read the pre-processed data
 options(stringsAsFactors = FALSE)
-library(survival)
-library(sqldf)
-library(qvalue)
-library(glmnet)
+library("survival")
+library("sqldf")
+library("qvalue")
+library("glmnet")
+library("WGCNA")
+
 
 dc=read.table("D:/TCGA/mRNA_ans/phe.csv",sep=",",header=T,na.strings="NA")
 cdd=read.table("D:/TCGA/mRNA_ans/complete_data.txt",sep=",",header=T,row.names=1)
@@ -42,7 +44,6 @@ res=Coxnet(x, y, penalty = "Enet",alpha = 0.1,lambda=res$fit0$lambda)
 wgcna_exp=x[,which(rowSums(r_beta_m)!=0)]
 wgcna_exp=data.frame(wgcna_exp[,-length(wgcna_exp[1,])])
 
-
 powers = c(c(1:10), seq(from = 12, to=20, by=2))
 sft = pickSoftThreshold(wgcna_exp, powerVector = powers, verbose = 5)
 
@@ -63,7 +64,6 @@ dendroLabels = FALSE,
 addGuide = TRUE)
 
 
-
 adjacency=adjacency(wgcna_exp,power=4)
 TOM = TOMsimilarity(adjacency);
 dissTOM = 1-TOM
@@ -74,18 +74,38 @@ dynamicMods = cutreeDynamic(dendro = geneTree, distM = dissTOM, deepSplit = 2, p
 table(dynamicMods)
 
 
-###SPLS
 library("spls")
   
-  setwd("F:/Job/project/omics/109/variation")
+  #setwd("F:/Job/project/omics/109/variation")
 
+  #mRNA=read.table("D:/TCGA/RM_outlier/mrna_exp_rm_outlier.txt",sep=",")
+  #miRNA=read.table("D:/TCGA/RM_outlier/mirna_exp_rm_outlier.txt",sep=",")
+  #meth=read.table("D:/TCGA/RM_outlier/methy_combined_Level_3_JHU_USC__HumanMethylation27_rm_outlier.txt",sep=",")
+  
+  
+   mRNA=read.table("/home/jzhang9/TCGA/mrna_exp_rm_outlier.txt",sep=",")
+   miRNA=read.table("/home/jzhang9/TCGA/mirna_exp_rm_outlier.txt",sep=",")
+   meth=read.table("/home/jzhang9/TCGA/methy_combined_Level_3_JHU_USC__HumanMethylation27_rm_outlier.txt",sep=",")
+  
+   
+  
+  lable_mRNA=NULL
 
-  set.seed(1)
-  cv <- cv.spls( mice$x, mice$y, eta = seq(0.1,0.9,0.1), K = c(1:5) )
+  for (i in 1:(length(table(dynamicMods_0_02))-1)){
+  
+	subject_lable=c(rownames(meth),rownames(miRNA))[duplicated(c(rownames(meth),rownames(miRNA)))]
+	lable_mRNA=lable_gene[which(dynamicMods_0_02==i),1]
+	predict_mm=scale(cbind(miRNA[subject_lable,],meth[subject_lable,]))
 
-  #SPLS fits are obtained as below.
-  f <- spls( mice$x, mice$y, eta = cv$eta.opt, K = cv$K.opt )
-  print(f)
+  	set.seed(i)
+  	cv <- cv.spls(predict_mm,scale(mRNA[subject_lable,lable_mRNA]), eta = seq(0.1,0.9,0.1), K = c(1:10) )
 
-  gene_facors<-rownames(f$projection)
+  	#SPLS fits are obtained as below.
+  	f <- spls( predict_mm,scale(mRNA[subject_lable,lable_mRNA]), eta = cv$eta.opt, K = cv$K.opt )
+  	#print(f)
 
+  	gene_facors<-rownames(f$projection)
+
+  	write.list(list(colnames(mRNA[subject_lable,lable_mRNA]),gene_facors),output=paste(i,"_module.txt",sep=""))
+
+   }

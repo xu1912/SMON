@@ -1,3 +1,5 @@
+//FastGGM source code
+
 install.packages(pkgs = "C:/Users/biostatadmin/Downloads/FastGGM.tar.gz", repos = NULL, type = "source")
 library(Rcpp)
 Sys.setenv("PKG_CPPFLAGS"="-std=c++0x")

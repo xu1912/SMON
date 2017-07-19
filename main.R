@@ -72,24 +72,15 @@ table(dynamicMods)
 
 #### 4.SPLS to get module gene-associated regulators.
 library("spls")
-  
-  #setwd("F:/Job/project/omics/109/variation")
 
-  #mRNA=read.table("D:/TCGA/RM_outlier/mrna_exp_rm_outlier.txt",sep=",")
-  #miRNA=read.table("D:/TCGA/RM_outlier/mirna_exp_rm_outlier.txt",sep=",")
-  #meth=read.table("D:/TCGA/RM_outlier/methy_combined_Level_3_JHU_USC__HumanMethylation27_rm_outlier.txt",sep=",")
-  
-  
-   mRNA=read.table("/home/jzhang9/TCGA/mrna_exp_rm_outlier.txt",sep=",")
-   miRNA=read.table("/home/jzhang9/TCGA/mirna_exp_rm_outlier.txt",sep=",")
-   meth=read.table("/home/jzhang9/TCGA/methy_combined_Level_3_JHU_USC__HumanMethylation27_rm_outlier.txt",sep=",")
-  
-   
-  
-  lable_mRNA=NULL
+## Read mRNA, miRNA and methylation data. They have same txt format. Each row represents a subject. Each column represents a gene. Header included but can be customized.
+mRNA=read.table("D:/TCGA/RM_outlier/mrna_exp_rm_outlier.txt",sep=",")
+miRNA=read.table("D:/TCGA/RM_outlier/mirna_exp_rm_outlier.txt",sep=",")
+meth=read.table("D:/TCGA/RM_outlier/methy_combined_Level_3_JHU_USC__HumanMethylation27_rm_outlier.txt",sep=",")
 
-  for (i in 1:(length(table(dynamicMods_0_02))-1)){
-  
+lable_mRNA=NULL
+
+for (i in 1:(length(table(dynamicMods))-1)){
 	subject_lable=c(rownames(meth),rownames(miRNA))[duplicated(c(rownames(meth),rownames(miRNA)))]
 	lable_mRNA=lable_gene[which(dynamicMods_0_02==i),1]
 	predict_mm=scale(cbind(miRNA[subject_lable,],meth[subject_lable,]))
@@ -104,5 +95,4 @@ library("spls")
   	gene_facors<-rownames(f$projection)
 
   	write.list(list(colnames(mRNA[subject_lable,lable_mRNA]),gene_facors),output=paste(i,"_module.txt",sep=""))
-
-   }
+}

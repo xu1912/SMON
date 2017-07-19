@@ -1,4 +1,3 @@
-##Read the pre-processed data
 options(stringsAsFactors = FALSE)
 library("survival")
 library("sqldf")
@@ -6,64 +5,62 @@ library("qvalue")
 library("glmnet")
 library("WGCNA")
 
-
+#### 1.Read the pre-processed data
+## Read phenotype data in csv format. Header included but can be customized.
 dc=read.table("D:/TCGA/mRNA_ans/phe.csv",sep=",",header=T,na.strings="NA")
+
+## Read the mRNA expression data in txt format. Each row represents a subject. Each column represents a gene. Header included but can be customized.
 cdd=read.table("D:/TCGA/mRNA_ans/complete_data.txt",sep=",",header=T,row.names=1)
 
+## Combine phenotype and expression data by the common id.
 tdd=sqldf("select a.* from cdd a, dc b where a.V1=b.bcr_patient_barcode")
 
+## In our manuscript, we used Cox survival model. You may change other model, lm or glm.
 ty[,1]=ty[,1]/365.0
 colnames(ty)[1]="time"
 tx=as.matrix(cbind(tdd[,-1], dc$age_at_initial_pathologic_diagnosis))
 tx=apply(tx, 2,as.numeric)
 dc$age2=dc$age_at_initial_pathologic_diagnosis^2
-
 my.surv <- Surv(ty[,1], ty[,2])
 gene_ln=colnames(tx)[-17815]
 p_n=c()
 for (i in 1:length(gene_ln)){
-
 	g_1=coxph(my.surv~age_at_initial_pathologic_diagnosis+age2+as.matrix(tx[,i]),data=dc)
 	p_n[i]=summary(g_1)$coefficients[3,5]
-
 }
-
 q_n=qvalue(p_n)
 
-y=as.matrix(ty)
 
+#### 2.Elastic net penalized regression for Cox model. Use glmnet for lm and glm model.
 library("Coxnet")
+y=as.matrix(ty)
+x=as.matrix(tdd[,-1])
 
-#cv_r=cv.glmnet(x,y,family="cox")
-#r_beta=cv_r$glmnet.fit$beta
-#r_beta_m=as.matrix(r_beta)
-
+## Here, alpha=0.1 was also resulted from a tunning process.
 res=Coxnet(x, y, penalty = "Enet",alpha = 0.1,nlambda=20,nfolds=10)
 res=Coxnet(x, y, penalty = "Enet",alpha = 0.1,lambda=res$fit0$lambda)
 
+#cv_r=cv.glmnet(x,y)
+#r_beta=cv_r$glmnet.fit$beta
+#r_beta_m=as.matrix(r_beta)
+
+#### 3.WGCNA to identify modules in the trait-associated mRNAs.
 wgcna_exp=x[,which(rowSums(r_beta_m)!=0)]
 wgcna_exp=data.frame(wgcna_exp[,-length(wgcna_exp[1,])])
 
 powers = c(c(1:10), seq(from = 12, to=20, by=2))
 sft = pickSoftThreshold(wgcna_exp, powerVector = powers, verbose = 5)
 
+## Power=4 was resulted following WGCNA instructions.
+## We tried two ways provided by the WGCNA to get the modules.
+# 3.1
 bwnet = blockwiseModules(wgcna_exp, maxBlockSize = 10000,
                            power = 4, minModuleSize = 10,
                            reassignThreshold = 0, mergeCutHeight = 0.25,
                            numericLabels = TRUE,
                            saveTOMs = TRUE,
                            verbose = 3)
-
-sizeGrWindow(12, 9)
-# Convert labels to colors for plotting
-mergedColors = labels2colors(bwnet$colors)
-# Plot the dendrogram and the module colors underneath
-plotDendroAndColors(bwnet$dendrograms[[1]], mergedColors[bwnet$blockGenes[[1]]],
-"Module colors",
-dendroLabels = FALSE,
-addGuide = TRUE)
-
-
+# 3.2
 adjacency=adjacency(wgcna_exp,power=4)
 TOM = TOMsimilarity(adjacency);
 dissTOM = 1-TOM
@@ -73,7 +70,7 @@ dynamicMods = cutreeDynamic(dendro = geneTree, distM = dissTOM, deepSplit = 2, p
 
 table(dynamicMods)
 
-
+#### 4.SPLS to get module gene-associated regulators.
 library("spls")
   
   #setwd("F:/Job/project/omics/109/variation")
